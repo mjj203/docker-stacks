@@ -29,7 +29,7 @@ Create a new Dockerfile like the one shown below.
 
 ```dockerfile
 # Start from a core stack version
-FROM jupyter/datascience-notebook:9e63909e0317
+FROM jupyter/datascience-notebook:85f615d5cafa
 # Install in the default python3 environment
 RUN pip install --quiet --no-cache-dir 'flake8==3.9.2' && \
     fix-permissions "${CONDA_DIR}" && \
@@ -48,7 +48,7 @@ Next, create a new Dockerfile like the one shown below.
 
 ```dockerfile
 # Start from a core stack version
-FROM jupyter/datascience-notebook:9e63909e0317
+FROM jupyter/datascience-notebook:85f615d5cafa
 # Install from requirements.txt file
 COPY --chown=${NB_UID}:${NB_GID} requirements.txt /tmp/
 RUN pip install --quiet --no-cache-dir --requirement /tmp/requirements.txt && \
@@ -60,7 +60,7 @@ For conda, the Dockerfile is similar:
 
 ```dockerfile
 # Start from a core stack version
-FROM jupyter/datascience-notebook:9e63909e0317
+FROM jupyter/datascience-notebook:85f615d5cafa
 # Install from requirements.txt file
 COPY --chown=${NB_UID}:${NB_GID} requirements.txt /tmp/
 RUN mamba install --yes --file /tmp/requirements.txt && \
@@ -283,7 +283,7 @@ To use a specific version of JupyterHub, the version of `jupyterhub` in your ima
 version in the Hub itself.
 
 ```dockerfile
-FROM jupyter/base-notebook:9e63909e0317
+FROM jupyter/base-notebook:85f615d5cafa
 RUN pip install --quiet --no-cache-dir jupyterhub==1.4.1 && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
@@ -474,7 +474,7 @@ For JupyterLab:
 
 ```bash
 docker run -it --rm \
-    jupyter/base-notebook:9e63909e0317 \
+    jupyter/base-notebook:85f615d5cafa \
     start.sh jupyter lab --LabApp.token=''
 ```
 
@@ -482,7 +482,7 @@ For jupyter classic:
 
 ```bash
 docker run -it --rm \
-    jupyter/base-notebook:9e63909e0317 \
+    jupyter/base-notebook:85f615d5cafa \
     start.sh jupyter notebook --NotebookApp.token=''
 ```
 
@@ -549,4 +549,35 @@ RUN PYV=$(ls "${CONDA_DIR}/lib" | grep ^python) && \
     sed -i 's/#axes.unicode_minus: True/axes.unicode_minus: False/g' "${MPL_DATA}/matplotlibrc" && \
     rm -rf "/home/${NB_USER}/.cache/matplotlib" && \
     python -c 'import matplotlib.font_manager;print("font loaded: ",("Source Han Sans CN" in [f.name for f in matplotlib.font_manager.fontManager.ttflist]))'
+```
+
+## Enable clipboard in pandas on Linux systems
+
+```{admonition} Additional notes
+    This solution works on Linux host systems.
+    It is not required on Windows and won't work on macOS.
+```
+
+To enable `pandas.read_clipboard()` functionality, you need to have `xclip` installed
+(installed in `minimal-notebook` and all the inherited images)
+and add these options when running `docker`: `-e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix`, i.e.:
+
+```bash
+docker run -it --rm \
+    -e DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    jupyter/minimal-notebook
+```
+
+## Add ijavascript kernel to container
+
+The example below is a Dockerfile to install the [ijavascript kernel](https://github.com/n-riesco/ijavascript).
+
+```dockerfile
+# use one of the jupyter docker stacks images
+FROM jupyter/scipy-notebook:85f615d5cafa
+
+# install ijavascript
+RUN npm install -g ijavascript
+RUN ijsinstall
 ```

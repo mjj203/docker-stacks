@@ -6,8 +6,8 @@ env:
 on:
   workflow_call:
     inputs:
-      images:
-        description: Stringified JSON object listing image names
+      image:
+        description: Image name
         required: true
         type: string
       platform:
@@ -21,12 +21,8 @@ on:
         required: true
 
 jobs:
-  tag-manifest-push:
+  tag-push:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        image: ${{ fromJson(inputs.images) }}
 
     steps:
       - name: Checkout Repo ⚡️
@@ -38,12 +34,12 @@ jobs:
       - name: Load image to Docker 📥
         uses: ./.github/actions/load-image
         with:
-          image: ${{ matrix.image }}
+          image: ${{ inputs.image }}
           platform: ${{ inputs.platform }}
 
       - name: Login to Docker Hub 🔐
-        if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
-        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b # dependabot updates to latest release
+        if: github.repository == 'jupyter/docker-stacks' && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -51,12 +47,12 @@ jobs:
       - name: Download tags file 📥
         uses: actions/download-artifact@v3
         with:
-          name: ${{ matrix.image }}-${{ inputs.platform }}-tags
+          name: ${{ inputs.image }}-${{ inputs.platform }}-tags
           path: /tmp/tags/
       - name: Apply tags to the loaded image 🏷
-        run: python3 -m tagging.apply_tags --short-image-name ${{ matrix.image }} --tags-dir /tmp/tags/ --platform ${{ inputs.platform }} --owner ${{ env.OWNER }}
+        run: python3 -m tagging.apply_tags --short-image-name ${{ inputs.image }} --tags-dir /tmp/tags/ --platform ${{ inputs.platform }} --owner ${{ env.OWNER }}
 
       - name: Push Images to Docker Hub 📤
-        if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
-        run: docker push --all-tags ${{ env.OWNER }}/${{ matrix.image }}
+        if: github.repository == 'jupyter/docker-stacks' && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+        run: docker push --all-tags ${{ env.OWNER }}/${{ inputs.image }}
         shell: bash
